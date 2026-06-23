@@ -12,7 +12,7 @@
   <style>
     * { font-family: 'Noto Sans KR', sans-serif; box-sizing: border-box; }
     body { margin: 0; background-color: #0F1A15; }
-    input, select, textarea { font-family: 'Noto Sans KR', sans-serif; font-size: 14px; }
+    input, select, textarea, button { font-family: 'Noto Sans KR', sans-serif; font-size: 14px; }
     input::placeholder, textarea::placeholder { color: #A2B5AC; opacity: 0.7; }
   </style>
 </head>
@@ -21,22 +21,27 @@
   <script>
     const e = React.createElement;
 
-    const _s = ["h","t","t","p","s",":","/","/","h","o","o","k","s",".","s","l","a","c","k",".","c","o","m","/","s","e","rsv","i","c","e","s","/"];
-    const _k = [84,48,66,54,65,69,82,50,71,68,55,47,66,48,66,54,67,65,78,76,70,52,52,47,71,68,98,119,122,72,112,65,80,76,122,113,84,110,107,82,53,65,111,83,121,51,83,98];
-    const getSlackPath = () => _s.join("").replace("rsv","") + _k.map(c => String.fromCharCode(c)).join("");
+    const gradeOptions = [
+      { label: '초등부', values: ['초등 4학년', '초등 5학년', '초등 6학년'] },
+      { label: '중등부', values: ['중등 1학년', '중등 2학년', '중등 3학년'] },
+      { label: '고등부', values: ['고등 1학년', '고등 2학년', '고등 3학년'] }
+    ];
 
     const generateNextDays = (count = 14) => {
       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
       const datesArray = [];
-      let addedCount = 0, daysOffset = 0;
+      let addedCount = 0;
+      let daysOffset = 0;
+
       while (addedCount < count && daysOffset < 30) {
         const current = new Date();
         current.setDate(current.getDate() + daysOffset);
         const dayOfWeek = current.getDay();
+
         if (dayOfWeek !== 0 && dayOfWeek !== 1) {
           datesArray.push({
-            id: `${String(current.getMonth()+1).padStart(2,'0')}${String(current.getDate()).padStart(2,'0')}`,
-            month: `${current.getMonth()+1}월`,
+            id: `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`,
+            month: `${current.getMonth() + 1}월`,
             day: `${current.getDate()}`,
             week: dayNames[dayOfWeek],
             dayOfWeek
@@ -45,6 +50,7 @@
         }
         daysOffset++;
       }
+
       return datesArray;
     };
 
@@ -52,17 +58,19 @@
 
     const generateTimeslotsForDate = (date) => {
       const slots = [];
+
       if (date.dayOfWeek === 6) {
         for (let h = 10; h <= 14; h++) {
-          slots.push({ id: `${date.id}-${h}-00`, hour: h, minute: 0, time: `${h >= 12 ? '오후' : '오전'} ${h > 12 ? h-12 : h}:00` });
-          if (h !== 14) slots.push({ id: `${date.id}-${h}-30`, hour: h, minute: 30, time: `${h >= 12 ? '오후' : '오전'} ${h > 12 ? h-12 : h}:30` });
+          slots.push({ id: `${date.id}-${h}-00`, hour: h, minute: 0, time: `${h >= 12 ? '오후' : '오전'} ${h > 12 ? h - 12 : h}:00` });
+          if (h !== 14) slots.push({ id: `${date.id}-${h}-30`, hour: h, minute: 30, time: `${h >= 12 ? '오후' : '오전'} ${h > 12 ? h - 12 : h}:30` });
         }
       } else {
         for (let h = 15; h <= 20; h++) {
-          slots.push({ id: `${date.id}-${h}-00`, hour: h, minute: 0, time: `오후 ${h-12}:00` });
-          if (h !== 20) slots.push({ id: `${date.id}-${h}-30`, hour: h, minute: 30, time: `오후 ${h-12}:30` });
+          slots.push({ id: `${date.id}-${h}-00`, hour: h, minute: 0, time: `오후 ${h - 12}:00` });
+          if (h !== 20) slots.push({ id: `${date.id}-${h}-30`, hour: h, minute: 30, time: `오후 ${h - 12}:30` });
         }
       }
+
       return slots;
     };
 
@@ -79,6 +87,7 @@
       const [formData, setFormData] = React.useState({ studentName: '', school: '', grade: '중등 1학년', phone: '', memo: '' });
       const [isBooked, setIsBooked] = React.useState(false);
       const [isSending, setIsSending] = React.useState(false);
+      const [errorMessage, setErrorMessage] = React.useState('');
       const [nowTime, setNowTime] = React.useState(new Date());
 
       React.useEffect(() => {
@@ -89,192 +98,3 @@
       const currentSlots = timeslots[selectedDateId] || [];
       const currentTargetDate = dates.find(d => d.id === selectedDateId);
       const formattedDateString = currentTargetDate ? `${currentTargetDate.month} ${currentTargetDate.day}일(${currentTargetDate.week})` : '';
-
-      const isSlotAvailable = (slot) => {
-        const today = new Date();
-        const currentMonthId = `${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-        if (selectedDateId === currentMonthId) {
-          const slotTime = new Date();
-          slotTime.setHours(slot.hour, slot.minute, 0, 0);
-          const limitTime = new Date(nowTime.getTime() + 10 * 60 * 1000);
-          if (slotTime < limitTime) return false;
-        }
-        return true;
-      };
-
-     const sendSlackNotification = async (bookingInfo) => {
-  try {
-    await fetch(getSlackPath(), {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `payload=${encodeURIComponent(JSON.stringify({
-        text: `🔔 *[라엘수학 성북관] 방문 상담 예약 접수!* \n\n• *희망일시:* ${bookingInfo.date} ${bookingInfo.time}\n• *학생이름:* ${bookingInfo.studentName}\n• *학교학년:* ${bookingInfo.school} (${bookingInfo.grade})\n• *연락처:* ${bookingInfo.phone}\n• *메모:* ${bookingInfo.memo || '없음'}\n\n 📱 조율 후 학부모님께 연락주세요.`
-      }))}`
-    });
-  } catch (err) {}
-};
-
-      const handleSubmit = async (ev) => {
-        ev.preventDefault();
-        if (!selectedTime || isSending) return;
-        setIsSending(true);
-        const newRes = { id: Date.now(), date: formattedDateString, time: selectedTime.time, ...formData };
-        setReservations(prev => [...prev, newRes]);
-        await sendSlackNotification(newRes);
-        setIsSending(false);
-        setIsBooked(true);
-      };
-
-      const s = {
-        page: { backgroundColor: '#0F1A15', color: '#FFFFFF', minHeight: '100vh', paddingBottom: '40px' },
-        header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#162A21', padding: '15px 20px', borderBottom: '1px solid #233F32' },
-        adminBtn: { backgroundColor: 'transparent', border: '1px solid #D4AF37', color: '#D4AF37', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 },
-        main: { maxWidth: '600px', margin: '0 auto', padding: '20px 15px' },
-        dateScroll: { overflowX: 'auto', display: 'flex', gap: '8px', paddingBottom: '10px' },
-        sectionTitle: { fontSize: '15px', color: '#D4AF37', marginBottom: '12px', fontWeight: 700 },
-        slotGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' },
-        formBox: { marginTop: '25px', backgroundColor: '#162A21', borderRadius: '10px', padding: '20px', border: '1px solid #233F32' },
-        inputStyle: { width: '90%', backgroundColor: '#0F1A15', border: '1px solid #233F32', borderRadius: '5px', padding: '10px', color: '#FFF', outline: 'none' },
-        selectStyle: { width: '100%', backgroundColor: '#0F1A15', border: '1px solid #233F32', borderRadius: '5px', padding: '10px', color: '#FFF', outline: 'none' },
-        textareaStyle: { width: '96%', backgroundColor: '#0F1A15', border: '1px solid #233F32', borderRadius: '5px', padding: '10px', color: '#FFF', resize: 'none', outline: 'none' },
-        label: { fontSize: '12px', color: '#A2B5AC', fontWeight: '600', display: 'block', marginBottom: '4px' },
-      };
-
-      const dateBtns = dates.map(d =>
-        e('button', {
-          type: 'button', key: d.id,
-          onClick: () => { setSelectedDateId(d.id); setSelectedTime(null); setIsBooked(false); },
-          style: { backgroundColor: selectedDateId === d.id ? '#D4AF37' : '#162A21', border: '1px solid #233F32', borderRadius: '8px', padding: '10px', minWidth: '60px', color: selectedDateId === d.id ? '#0F1A15' : '#FFF', cursor: 'pointer', flexShrink: 0 }
-        },
-          e('div', { style: { fontSize: '10px' } }, d.month),
-          e('div', { style: { fontSize: '18px', margin: '2px 0', fontWeight: 700 } }, d.day),
-          e('div', { style: { fontSize: '11px' } }, d.week)
-        )
-      );
-
-      const slotBtns = currentSlots.map(slot => {
-        const available = isSlotAvailable(slot);
-        const isSelected = selectedTime?.id === slot.id;
-        return e('button', {
-          type: 'button', key: slot.id,
-          disabled: !available,
-          onClick: () => { setSelectedTime(slot); setIsBooked(false); },
-          style: {
-            backgroundColor: !available ? '#121F19' : isSelected ? '#1D3B2E' : '#162A21',
-            border: isSelected ? '2px solid #D4AF37' : '1px solid #233F32',
-            opacity: !available ? 0.2 : 1,
-            borderRadius: '8px', padding: '12px 5px', color: '#FFF',
-            cursor: available ? 'pointer' : 'not-allowed'
-          }
-        },
-          e('div', { style: { fontSize: '14px', fontWeight: 600 } }, slot.time),
-          e('div', { style: { color: available ? '#2ecc71' : '#e74c3c', fontSize: '10px', marginTop: '4px', fontWeight: 'bold' } }, available ? '신청 가능' : '마감')
-        );
-      });
-
-      const bookedView = e('div', { style: { textAlign: 'center' } },
-        e('h3', { style: { color: '#2ecc71', marginBottom: '10px', fontWeight: 700 } }, '🎉 예약 신청 완료'),
-        e('p', { style: { color: '#A2B5AC', fontSize: '13px', lineHeight: '1.5' } },
-          "신청하신 시간은 '상담 희망 시간'으로 우선 접수되었습니다. 학원 사정에 따라 일정이 조율될 수 있으며, ",
-          e('strong', null, '확정 안내를 위해 빠른 시일 내에 학원에서 연락'),
-          '을 드리겠습니다. 감사합니다.'
-        ),
-        e('button', {
-          type: 'button',
-          onClick: () => { setSelectedTime(null); setIsBooked(false); setFormData({ studentName: '', school: '', grade: '중등 1학년', phone: '', memo: '' }); },
-          style: { width: '100%', backgroundColor: '#D4AF37', color: '#0F1A15', border: 'none', borderRadius: '5px', padding: '12px', marginTop: '15px', cursor: 'pointer', fontWeight: 700 }
-        }, '확인')
-      );
-
-      const reservationForm = e('form', { onSubmit: handleSubmit },
-        e('h3', { style: s.sectionTitle }, `[선택] ${formattedDateString} ${selectedTime?.time || ''}`),
-        e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
-          e('div', null,
-            e('label', { style: s.label }, '학생 이름 *'),
-            e('input', { type: 'text', required: true, style: s.inputStyle, value: formData.studentName, onChange: ev => setFormData({ ...formData, studentName: ev.target.value }) })
-          ),
-          e('div', null,
-            e('label', { style: s.label }, '학교명 *'),
-            e('input', { type: 'text', required: true, style: s.inputStyle, placeholder: '예: 용문고', value: formData.school, onChange: ev => setFormData({ ...formData, school: ev.target.value }) })
-          )
-        ),
-        e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
-          e('div', null,
-            e('label', { style: s.label }, '학년 *'),
-            e('select', { style: s.selectStyle, value: formData.grade, onChange: ev => setFormData({ ...formData, grade: ev.target.value }) },
-              e('optgroup', { label: '초등부' },
-                e('option', { value: '초등 4학년' }, '초등 4학년'),
-                e('option', { value: '초등 5학년' }, '초등 5학년'),
-                e('option', { value: '초등 6학년' }, '초등 6학년')
-              ),
-              e('optgroup', { label: '중등부' },
-                e('option', { value: '중등 1학년' }, '중등 1학년'),
-                e('option', { value: '중등 2학년' }, '중등 2학년'),
-                e('option', { value: '중등 3학년' }, '중등 3학년')
-              ),
-              e('optgroup', { label: '고등부' },
-                e('option', { value: '고등 1학년' }, '고등 1학년'),
-                e('option', { value: '고등 2학년' }, '고등 2학년'),
-                e('option', { value: '고등 3학년' }, '고등 3학년')
-              )
-            )
-          ),
-          e('div', null,
-            e('label', { style: s.label }, '연락처 *'),
-            e('input', { type: 'tel', required: true, style: s.inputStyle, placeholder: '010-0000-0000', value: formData.phone, onChange: ev => setFormData({ ...formData, phone: ev.target.value }) })
-          )
-        ),
-        e('div', { style: { marginBottom: '15px' } },
-          e('label', { style: s.label }, '상담 희망 내용'),
-          e('textarea', { rows: 2, style: s.textareaStyle, placeholder: '상담 희망 내용을 간단히 적어주세요.', value: formData.memo, onChange: ev => setFormData({ ...formData, memo: ev.target.value }) })
-        ),
-        e('button', { type: 'submit', disabled: isSending, style: { width: '100%', backgroundColor: isSending ? '#a08c30' : '#D4AF37', color: '#0F1A15', border: 'none', borderRadius: '5px', padding: '12px', cursor: isSending ? 'not-allowed' : 'pointer', fontWeight: 700 } },
-          isSending ? '전송 중...' : '예약 신청하기'
-        )
-      );
-
-      const adminView = e('div', { style: { backgroundColor: '#162A21', border: '1px solid #233F32', borderRadius: '10px', padding: '20px' } },
-        e('h3', { style: { color: '#D4AF37', marginBottom: '15px', fontWeight: 700 } }, '📋 예약 접수 현황'),
-        reservations.length === 0
-          ? e('div', { style: { color: '#aaa', textAlign: 'center', padding: '20px' } }, '접수된 내역이 없습니다.')
-          : reservations.map(r => e('div', { key: r.id, style: { borderBottom: '1px solid #233F32', padding: '10px 0' } },
-              e('strong', null, `${r.date} ${r.time}`), ` - ${r.studentName}(${r.school})`
-            ))
-      );
-
-      const parentView = e('div', null,
-        e('div', { style: { textAlign: 'center', margin: '20px 0' } },
-          e('h2', { style: { fontSize: '22px', marginBottom: '8px', fontWeight: 700 } }, '방문 상담 예약 신청'),
-          e('p', { style: { color: '#A2B5AC', fontSize: '13px' } }, '원하시는 날짜와 시간대를 선택해 주세요.')
-        ),
-        e('div', { style: s.dateScroll }, ...dateBtns),
-        e('div', { style: { marginTop: '25px' } },
-          e('h3', { style: s.sectionTitle }, `✨ ${formattedDateString} 예약 가능 시간`),
-          e('div', { style: s.slotGrid }, ...slotBtns)
-        ),
-        selectedTime ? e('div', { style: s.formBox }, isBooked ? bookedView : reservationForm) : null
-      );
-
-      return e('div', { style: s.page },
-        e('header', { style: s.header },
-          e('div', { style: { fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' } },
-            e('span', { style: { color: '#D4AF37' } }, 'RAEL'),
-            ' MATH ',
-            e('span', { style: { color: '#A2B5AC', fontSize: '12px', fontWeight: 400 } }, '성북관')
-          ),
-          e('button', {
-            type: 'button',
-            onClick: () => { setIsAdmin(!isAdmin); setSelectedTime(null); setIsBooked(false); },
-            style: s.adminBtn
-          }, isAdmin ? '학부모 모드' : '관리자 모드')
-        ),
-        e('main', { style: s.main }, isAdmin ? adminView : parentView)
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(e(AcademyReservation));
-  </script>
-</body>
-</html>
