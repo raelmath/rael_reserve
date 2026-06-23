@@ -102,18 +102,18 @@
         return true;
       };
 
-      const sendSlackNotification = async (bookingInfo) => {
-        try {
-          await fetch(getSlackPath(), {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: `🔔 *[라엘수학 성북관] 방문 상담 예약 접수!* \n\n• *희망일시:* ${bookingInfo.date} ${bookingInfo.time}\n• *학생이름:* ${bookingInfo.studentName}\n• *학교학년:* ${bookingInfo.school} (${bookingInfo.grade})\n• *연락처:* ${bookingInfo.phone}\n• *메모:* ${bookingInfo.memo || '없음'}\n\n 📱 조율 후 학부모님께 연락주세요.`
-            })
-          });
-        } catch (err) {}
-      };
+     const sendSlackNotification = async (bookingInfo) => {
+  try {
+    await fetch(getSlackPath(), {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `payload=${encodeURIComponent(JSON.stringify({
+        text: `🔔 *[라엘수학 성북관] 방문 상담 예약 접수!* \n\n• *희망일시:* ${bookingInfo.date} ${bookingInfo.time}\n• *학생이름:* ${bookingInfo.studentName}\n• *학교학년:* ${bookingInfo.school} (${bookingInfo.grade})\n• *연락처:* ${bookingInfo.phone}\n• *메모:* ${bookingInfo.memo || '없음'}\n\n 📱 조율 후 학부모님께 연락주세요.`
+      }))}`
+    });
+  } catch (err) {}
+};
 
       const handleSubmit = async (ev) => {
         ev.preventDefault();
