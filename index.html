@@ -6,24 +6,14 @@
   <title>라엘수학 성북관 - 방문 상담 예약</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- ✅ Babel 제거: @babel/standalone(~8MB)이 로딩 실패의 핵심 원인이었음 -->
-  <!-- ✅ 폰트는 @import 대신 <link>로 교체 (더 안정적) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Noto Sans KR', sans-serif; box-sizing: border-box; }
     body { margin: 0; background-color: #0F1A15; }
-    .gmarket-bold { font-weight: 700; letter-spacing: -0.5px; }
-    .gmarket-medium { font-weight: 600; }
-    input, select, textarea {
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 14px;
-    }
-    input::placeholder, textarea::placeholder {
-      color: #A2B5AC;
-      opacity: 0.7;
-    }
+    input, select, textarea { font-family: 'Noto Sans KR', sans-serif; font-size: 14px; }
+    input::placeholder, textarea::placeholder { color: #A2B5AC; opacity: 0.7; }
   </style>
 </head>
 <body>
@@ -115,8 +105,9 @@
       const sendSlackNotification = async (bookingInfo) => {
         try {
           await fetch(getSlackPath(), {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text: `🔔 *[라엘수학 성북관] 방문 상담 예약 접수!* \n\n• *희망일시:* ${bookingInfo.date} ${bookingInfo.time}\n• *학생이름:* ${bookingInfo.studentName}\n• *학교학년:* ${bookingInfo.school} (${bookingInfo.grade})\n• *연락처:* ${bookingInfo.phone}\n• *메모:* ${bookingInfo.memo || '없음'}\n\n 📱 조율 후 학부모님께 연락주세요.`
             })
@@ -135,11 +126,9 @@
         setIsBooked(true);
       };
 
-      // ── 스타일 상수 ──
       const s = {
         page: { backgroundColor: '#0F1A15', color: '#FFFFFF', minHeight: '100vh', paddingBottom: '40px' },
         header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#162A21', padding: '15px 20px', borderBottom: '1px solid #233F32' },
-        headerTitle: { fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' },
         adminBtn: { backgroundColor: 'transparent', border: '1px solid #D4AF37', color: '#D4AF37', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 },
         main: { maxWidth: '600px', margin: '0 auto', padding: '20px 15px' },
         dateScroll: { overflowX: 'auto', display: 'flex', gap: '8px', paddingBottom: '10px' },
@@ -149,11 +138,9 @@
         inputStyle: { width: '90%', backgroundColor: '#0F1A15', border: '1px solid #233F32', borderRadius: '5px', padding: '10px', color: '#FFF', outline: 'none' },
         selectStyle: { width: '100%', backgroundColor: '#0F1A15', border: '1px solid #233F32', borderRadius: '5px', padding: '10px', color: '#FFF', outline: 'none' },
         textareaStyle: { width: '96%', backgroundColor: '#0F1A15', border: '1px solid #233F32', borderRadius: '5px', padding: '10px', color: '#FFF', resize: 'none', outline: 'none' },
-        submitBtn: { width: '100%', backgroundColor: isSending ? '#a08c30' : '#D4AF37', color: '#0F1A15', border: 'none', borderRadius: '5px', padding: '12px', cursor: isSending ? 'not-allowed' : 'pointer', fontWeight: 700 },
         label: { fontSize: '12px', color: '#A2B5AC', fontWeight: '600', display: 'block', marginBottom: '4px' },
       };
 
-      // ── 날짜 버튼 ──
       const dateBtns = dates.map(d =>
         e('button', {
           type: 'button', key: d.id,
@@ -166,7 +153,6 @@
         )
       );
 
-      // ── 시간 슬롯 버튼 ──
       const slotBtns = currentSlots.map(slot => {
         const available = isSlotAvailable(slot);
         const isSelected = selectedTime?.id === slot.id;
@@ -187,7 +173,6 @@
         );
       });
 
-      // ── 예약 완료 화면 ──
       const bookedView = e('div', { style: { textAlign: 'center' } },
         e('h3', { style: { color: '#2ecc71', marginBottom: '10px', fontWeight: 700 } }, '🎉 예약 신청 완료'),
         e('p', { style: { color: '#A2B5AC', fontSize: '13px', lineHeight: '1.5' } },
@@ -202,7 +187,6 @@
         }, '확인')
       );
 
-      // ── 예약 폼 ──
       const reservationForm = e('form', { onSubmit: handleSubmit },
         e('h3', { style: s.sectionTitle }, `[선택] ${formattedDateString} ${selectedTime?.time || ''}`),
         e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
@@ -245,12 +229,11 @@
           e('label', { style: s.label }, '상담 희망 내용'),
           e('textarea', { rows: 2, style: s.textareaStyle, placeholder: '상담 희망 내용을 간단히 적어주세요.', value: formData.memo, onChange: ev => setFormData({ ...formData, memo: ev.target.value }) })
         ),
-        e('button', { type: 'submit', disabled: isSending, style: s.submitBtn },
+        e('button', { type: 'submit', disabled: isSending, style: { width: '100%', backgroundColor: isSending ? '#a08c30' : '#D4AF37', color: '#0F1A15', border: 'none', borderRadius: '5px', padding: '12px', cursor: isSending ? 'not-allowed' : 'pointer', fontWeight: 700 } },
           isSending ? '전송 중...' : '예약 신청하기'
         )
       );
 
-      // ── 관리자 뷰 ──
       const adminView = e('div', { style: { backgroundColor: '#162A21', border: '1px solid #233F32', borderRadius: '10px', padding: '20px' } },
         e('h3', { style: { color: '#D4AF37', marginBottom: '15px', fontWeight: 700 } }, '📋 예약 접수 현황'),
         reservations.length === 0
@@ -260,7 +243,6 @@
             ))
       );
 
-      // ── 학부모 뷰 ──
       const parentView = e('div', null,
         e('div', { style: { textAlign: 'center', margin: '20px 0' } },
           e('h2', { style: { fontSize: '22px', marginBottom: '8px', fontWeight: 700 } }, '방문 상담 예약 신청'),
@@ -271,14 +253,12 @@
           e('h3', { style: s.sectionTitle }, `✨ ${formattedDateString} 예약 가능 시간`),
           e('div', { style: s.slotGrid }, ...slotBtns)
         ),
-        selectedTime
-          ? e('div', { style: s.formBox }, isBooked ? bookedView : reservationForm)
-          : null
+        selectedTime ? e('div', { style: s.formBox }, isBooked ? bookedView : reservationForm) : null
       );
 
       return e('div', { style: s.page },
         e('header', { style: s.header },
-          e('div', { style: s.headerTitle },
+          e('div', { style: { fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' } },
             e('span', { style: { color: '#D4AF37' } }, 'RAEL'),
             ' MATH ',
             e('span', { style: { color: '#A2B5AC', fontSize: '12px', fontWeight: 400 } }, '성북관')
